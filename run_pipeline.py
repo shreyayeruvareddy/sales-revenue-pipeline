@@ -1,5 +1,6 @@
 # ============================================================
 # run_pipeline.py — Sales & Revenue Analytics Pipeline
+# 4 Stages: Generate >> Transform >> DB Load >> SQL Analytics
 # Usage: py -3.11 run_pipeline.py
 # ============================================================
 
@@ -54,29 +55,18 @@ def run_pipeline():
     except Exception as e:
         logger.error(f"❌ Stage 3 FAILED: {e}"); return False
 
-    # STAGE 4 — VALIDATION
-    logger.info("\n✅ STAGE 4: Validation Summary")
+    # STAGE 4 — SQL ANALYTICS + POWER BI EXPORT
+    logger.info("\n🔍 STAGE 4: SQL Analytics (CTEs + Window Functions)")
     logger.info("-" * 40)
+    t = time.time()
     try:
-        from src.db_loader import query_summary
-        summary = query_summary()
-        print("\n" + summary.to_string())
-
-        # Print key insights
-        regional = dfs["regional"]
-        underperforming = regional[regional["vs_avg_pct"] < -5]
-        logger.info(f"\n📊 KEY INSIGHTS:")
-        logger.info(f"   Total Annual Revenue:  ${dfs['transactions']['net_revenue'].sum():,.2f}")
-        logger.info(f"   Total Transactions:    {len(dfs['transactions']):,}")
-        logger.info(f"   Top Region:            {regional.iloc[0]['region']} (${regional.iloc[0]['total_revenue']:,.2f})")
-        if len(underperforming):
-            for _, row in underperforming.iterrows():
-                logger.info(f"   Underperforming:       {row['region']} ({row['vs_avg_pct']}% vs avg)")
-        logger.info(f"   Top Category:          {dfs['categories'].iloc[0]['category']} (${dfs['categories'].iloc[0]['total_revenue']:,.2f})")
-        logger.info(f"   RFM Champions:         {(dfs['rfm']['rfm_segment']=='Champions').sum()} customers")
-
+        from src.sql_runner import run_sql_analytics
+        results = run_sql_analytics()
+        logger.info(f"✅ Stage 4 complete in {round(time.time()-t,2)}s")
+        logger.info(f"   8 SQL queries executed from queries/ folder")
+        logger.info(f"   8 Power BI CSV files exported to outputs/")
     except Exception as e:
-        logger.warning(f"⚠️  Validation warning: {e}")
+        logger.error(f"❌ Stage 4 FAILED: {e}"); return False
 
     total = round(time.time() - start, 2)
     logger.info("\n" + "=" * 60)
